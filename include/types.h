@@ -1,0 +1,12 @@
+#ifndef H_TYPES
+#define H_TYPES
+
+#define CHAROUT_BASE 0x10000000
+#define RAM_BASE 0x80000000
+
+#define LUI_CODE 0b0000001
+#define SW_CODE 0b010010
+#define ADDI_CODE 0b0010011
+#define EBREAK_CODE 0b00100111
+
+#endif
