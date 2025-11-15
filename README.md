@@ -1,3 +1,5 @@
-Compile it using: riscv32-MINIRISC-elf-gcc (Linux).
+# Mini RISC Project
 
-cd /mnt/c/users/victo/perso/cours/s3/archi_ordi/RISC
+To test the program:
+* In the ```embedded_software/``` directory, run ```make TEST={test number}```. Replace ```{test number}``` with the integer corresponding to the test folder you want to run.
+* Run ```make exec``` in the root directory to run the program.
