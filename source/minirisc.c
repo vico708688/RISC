@@ -61,51 +61,72 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     uint32_t zeros_10 = (instr >> 22) & 0x000003FF;
     uint32_t zeros_25 = (instr >> 7) & 0x01FFFFFF;
 
+    /* next_PC update */
+    minirisc->next_PC = minirisc->PC + 4;
+
     /* Depends of the opcode's value */
     switch (opcode)
     {
     case LUI_CODE:
     {
+        // printf("LUI\n");
         minirisc->regs[rd] = (imm_lui << 12);
+        minirisc->PC = minirisc->next_PC;
         break;
     }
 
     case ADDI_CODE:
     {
+        // printf("ADDI\n");
         extend_sign(&imm, 11);
         minirisc->regs[rd] = minirisc->regs[rs] + imm;
+        minirisc->PC = minirisc->next_PC;
         break;
     }
 
     case EBREAK_CODE:
     {
+        // printf("EBREAK\n");
         minirisc->halt = 1;
+        minirisc->PC = minirisc->next_PC;
         break;
     }
 
     case AUIPC_CODE:
     {
         minirisc->regs[rd] = minirisc->PC + (imm_lui << 12);
+        minirisc->PC = minirisc->next_PC;
         break;
     }
 
     case JAL_CODE:
     {
-        extend_sign(&imm, 20);
-        uint32_t target = minirisc->PC + imm;
-        minirisc->regs[rd] = minirisc->PC + 4;
-        minirisc->PC = target;
+        // printf("JAL\n");
+
+        imm_lui <<= 1;
+        // Sign extension
+        extend_sign(&imm_lui, 20);
+
+        // printf("imm_lui = %x\n", imm_lui);
+
+        minirisc->PC += imm_lui;
+        minirisc->next_PC = minirisc->PC + 4;
+        minirisc->regs[rd] = minirisc->next_PC;
         break;
     }
 
+    /* A revoir */
     case JALR_CODE:
     {
-        extend_sign(&imm, 11);
-        uint32_t target = minirisc->regs[rs] + imm;
+        imm_lui <<= 1;
+        // Sign extension
+        extend_sign(&imm_lui, 20);
 
-        (target >> 1) << 1; /* Fait rien ? */
-        minirisc->regs[rd] = minirisc->PC + 4;
-        minirisc->PC = target;
+        // printf("imm_lui = %x\n", imm_lui);
+
+        minirisc->PC += imm_lui;
+        minirisc->next_PC = minirisc->PC + 4;
+        minirisc->regs[rd] = minirisc->next_PC;
         break;
     }
 
@@ -212,6 +233,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         uint32_t data = minirisc->regs[rd];
 
         platform_write(minirisc->platform, ACCESS_WORD, addr, data);
+        minirisc->PC = minirisc->next_PC;
 
         break;
     }
@@ -279,8 +301,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         break;
     }
     }
-
-    minirisc->PC = minirisc->next_PC;
 }
 
 void extend_sign(uint32_t *imm, int n)
