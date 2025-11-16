@@ -6,10 +6,6 @@
 #include "types.h"
 #include "platform.h"
 
-/**
- * plateform: comprend une mémoire, un périphérique “CharOut” ainsi qu’un bus d’interconnexion
- */
-
 struct platform_t *platform_new()
 {
     struct platform_t *plt;
@@ -99,6 +95,15 @@ void save_to_memory(struct platform_t *platform, uint32_t *code, int size)
 
 int platform_read(struct platform_t *platform, enum access_type_t access_type, uint32_t addr, uint32_t *data)
 {
+    /* Alignement check */
+    if ((access_type == ACCESS_WORD && addr & 0x3) ||
+        (access_type == ACCESS_HALF && addr & 0x1))
+    {
+        printf("Load address misaligned exception.\n");
+        return -1;
+    }
+
+    *data = platform->memory[(addr - RAM_BASE) >> 2]; // dois-je diviser par 4 ?
 }
 
 int platform_write(struct platform_t *platform, enum access_type_t access_type, uint32_t addr, uint32_t data)
@@ -106,9 +111,11 @@ int platform_write(struct platform_t *platform, enum access_type_t access_type, 
     /* RAM */
     if (addr >= RAM_BASE && addr < RAM_BASE + platform->size)
     {
-        if (addr & 0x3)
+        /* Alignement check */
+        if ((access_type == ACCESS_WORD && addr & 0x3) ||
+            (access_type == ACCESS_HALF && addr & 0x1))
         {
-            printf("Error: the target address is not aligned.\n");
+            printf("Load address misaligned exception.\n");
             return -1;
         }
 

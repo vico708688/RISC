@@ -41,6 +41,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc);
  */
 void minirisc_run(struct minirisc_t *minirisc);
 
-void extend_sign(uint32_t *imm);
+void extend_sign(uint32_t *imm, int n);
 
 #endif
