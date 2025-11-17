@@ -57,9 +57,9 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     uint32_t shamt = (instr >> 20) & 0x0000001F;
     uint32_t shamt_zeros = (instr >> 25) & 0x0000007F;
 
-    uint32_t zeros_3 = (instr >> 16) & 0x00000007;
-    uint32_t zeros_10 = (instr >> 22) & 0x000003FF;
-    uint32_t zeros_25 = (instr >> 7) & 0x01FFFFFF;
+    // uint32_t zeros_3 = (instr >> 16) & 0x00000007;
+    // uint32_t zeros_10 = (instr >> 22) & 0x000003FF;
+    // uint32_t zeros_25 = (instr >> 7) & 0x01FFFFFF;
 
     /* next_PC update */
     minirisc->next_PC = minirisc->PC + 4;
@@ -67,23 +67,23 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* Depends of the opcode's value */
     switch (opcode)
     {
+    /* OK */
     case LUI_CODE:
     {
-        // printf("LUI\n");
         minirisc->regs[rd] = (imm_lui << 12);
         minirisc->PC = minirisc->next_PC;
         break;
     }
-
+    /* OK */
     case ADDI_CODE:
     {
-        // printf("ADDI\n");
         extend_sign(&imm, 11);
         minirisc->regs[rd] = minirisc->regs[rs] + imm;
+
         minirisc->PC = minirisc->next_PC;
         break;
     }
-
+    /* OK */
     case EBREAK_CODE:
     {
         // printf("EBREAK\n");
@@ -98,35 +98,32 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         minirisc->PC = minirisc->next_PC;
         break;
     }
-
+    /* OK */
     case JAL_CODE:
     {
-        // printf("JAL\n");
-
         imm_lui <<= 1;
         // Sign extension
         extend_sign(&imm_lui, 20);
 
-        // printf("imm_lui = %x\n", imm_lui);
+        uint32_t target = minirisc->PC + imm_lui;
+        minirisc->regs[rd] = minirisc->PC + 4;
+        minirisc->PC = target;
 
-        minirisc->PC += imm_lui;
         minirisc->next_PC = minirisc->PC + 4;
-        minirisc->regs[rd] = minirisc->next_PC;
         break;
     }
-
-    /* A revoir */
+    /* OK */
     case JALR_CODE:
     {
-        imm_lui <<= 1;
         // Sign extension
-        extend_sign(&imm_lui, 20);
+        extend_sign(&imm_lui, 11);
 
-        // printf("imm_lui = %x\n", imm_lui);
+        uint32_t target = minirisc->regs[rs] + imm_lui;
+        target &= ~0x1;
+        rd = minirisc->PC + 4;
+        minirisc->PC = target;
 
-        minirisc->PC += imm_lui;
         minirisc->next_PC = minirisc->PC + 4;
-        minirisc->regs[rd] = minirisc->next_PC;
         break;
     }
 
@@ -225,7 +222,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         }
         break;
     }
-
+    /* OK */
     case SW_CODE:
     {
         extend_sign(&imm, 11);
@@ -233,8 +230,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         uint32_t data = minirisc->regs[rd];
 
         platform_write(minirisc->platform, ACCESS_WORD, addr, data);
-        minirisc->PC = minirisc->next_PC;
 
+        minirisc->PC = minirisc->next_PC;
         break;
     }
     /* A revoir */
@@ -247,7 +244,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         platform_write(minirisc->platform, ACCESS_HALF, addr, data);
         break;
     }
-
     /* A revoir */
     case SB_CODE:
     {
@@ -258,7 +254,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         platform_write(minirisc->platform, ACCESS_BYTE, addr, data);
         break;
     }
-
     /* A revoir */
     case LW_CODE:
     {
@@ -269,7 +264,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         platform_read(minirisc->platform, ACCESS_WORD, target, &addr);
         break;
     }
-
     /* A revoir */
     case LH_CODE:
     {
@@ -281,7 +275,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         extend_sign(&addr, 11);
         break;
     }
-
     /* A revoir*/
     case LHU_CODE:
     {
@@ -321,9 +314,15 @@ void extend_sign(uint32_t *imm, int n)
 
 void minirisc_run(struct minirisc_t *minirisc)
 {
+    // int i = 0;
     while (!minirisc->halt)
     {
         minirisc_fetch(minirisc);
         minirisc_decode_and_execute(minirisc);
+        // if (i == 20)
+        // {
+        //     minirisc->halt = 1;
+        // }
+        // i++;
     }
 }
