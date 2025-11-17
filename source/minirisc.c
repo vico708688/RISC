@@ -57,10 +57,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     uint32_t shamt = (instr >> 20) & 0x0000001F;
     uint32_t shamt_zeros = (instr >> 25) & 0x0000007F;
 
-    // uint32_t zeros_3 = (instr >> 16) & 0x00000007;
-    // uint32_t zeros_10 = (instr >> 22) & 0x000003FF;
-    // uint32_t zeros_25 = (instr >> 7) & 0x01FFFFFF;
-
     /* next_PC update */
     minirisc->next_PC = minirisc->PC + 4;
 
@@ -81,21 +77,22 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         minirisc->regs[rd] = minirisc->regs[rs] + imm;
 
         minirisc->PC = minirisc->next_PC;
+
         break;
     }
     /* OK */
     case EBREAK_CODE:
     {
-        // printf("EBREAK\n");
         minirisc->halt = 1;
         minirisc->PC = minirisc->next_PC;
         break;
     }
-
+    /* OK */
     case AUIPC_CODE:
     {
         minirisc->regs[rd] = minirisc->PC + (imm_lui << 12);
         minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
         break;
     }
     /* OK */
@@ -112,7 +109,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-    /* OK */
+    /* A revoir */
     case JALR_CODE:
     {
         // Sign extension
@@ -120,19 +117,24 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
         uint32_t target = minirisc->regs[rs] + imm_lui;
         target &= ~0x1;
-        rd = minirisc->PC + 4;
+        minirisc->regs[rd] = minirisc->PC + 4;
         minirisc->PC = target;
 
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-
+    /* Revoir types B: extend_sign(&imm, ??? 13 ???) */
+    /* OK */
     case BEQ_CODE:
     {
-        extend_sign(&imm, 11);
-        uint32_t target = minirisc->PC + (imm << 1);
+        imm <<= 1;
+        // Sign extension
+        extend_sign(&imm, 13);
 
-        if ((int32_t)rs == (int32_t)rd)
+        uint32_t target = minirisc->PC + imm;
+
+        minirisc->next_PC = minirisc->PC + 4;
+        if ((int32_t)minirisc->regs[rs] == (int32_t)minirisc->regs[rd])
         {
             minirisc->PC = target;
         }
@@ -142,13 +144,17 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         }
         break;
     }
-
+    /* OK */
     case BNE_CODE:
     {
-        extend_sign(&imm, 11);
-        uint32_t target = minirisc->PC + (imm << 1);
+        imm <<= 1;
+        // Sign extension
+        extend_sign(&imm, 13);
 
-        if ((int32_t)rs != (int32_t)rd)
+        uint32_t target = minirisc->PC + imm;
+
+        minirisc->next_PC = minirisc->PC + 4;
+        if ((int32_t)minirisc->regs[rs] != (int32_t)minirisc->regs[rd])
         {
             minirisc->PC = target;
         }
@@ -161,10 +167,14 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
     case BLT_CODE:
     {
-        extend_sign(&imm, 11);
-        uint32_t target = minirisc->PC + (imm << 1);
+        imm <<= 1;
+        // Sign extension
+        extend_sign(&imm, 13);
 
-        if ((int32_t)rs < (int32_t)rd)
+        uint32_t target = minirisc->PC + imm;
+
+        minirisc->next_PC = minirisc->PC + 4;
+        if ((int32_t)minirisc->regs[rs] < (int32_t)minirisc->regs[rd])
         {
             minirisc->PC = target;
         }
@@ -177,10 +187,14 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
     case BGE_CODE:
     {
-        extend_sign(&imm, 11);
-        uint32_t target = minirisc->PC + (imm << 1);
+        imm <<= 1;
+        // Sign extension
+        extend_sign(&imm, 13);
 
-        if ((int32_t)rs >= (int32_t)rd)
+        uint32_t target = minirisc->PC + imm;
+
+        minirisc->next_PC = minirisc->PC + 4;
+        if ((int32_t)minirisc->regs[rs] >= (int32_t)minirisc->regs[rd])
         {
             minirisc->PC = target;
         }
@@ -193,10 +207,14 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
     case BLTU_CODE:
     {
-        extend_sign(&imm, 11);
-        uint32_t target = minirisc->PC + (imm << 1);
+        imm <<= 1;
+        // Sign extension
+        extend_sign(&imm, 13);
 
-        if (rs < rd)
+        uint32_t target = minirisc->PC + imm;
+
+        minirisc->next_PC = minirisc->PC + 4;
+        if (minirisc->regs[rs] < minirisc->regs[rd])
         {
             minirisc->PC = target;
         }
@@ -209,10 +227,14 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
     case BGEU_CODE:
     {
-        extend_sign(&imm, 11);
-        uint32_t target = minirisc->PC + (imm << 1);
+        imm <<= 1;
+        // Sign extension
+        extend_sign(&imm, 13);
 
-        if (rs >= rd)
+        uint32_t target = minirisc->PC + imm;
+
+        minirisc->next_PC = minirisc->PC + 4;
+        if (minirisc->regs[rs] >= minirisc->regs[rd])
         {
             minirisc->PC = target;
         }
