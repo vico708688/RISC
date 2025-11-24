@@ -13,7 +13,7 @@ struct platform_t *platform_new()
     if ((plt = malloc(sizeof(struct platform_t))) == NULL)
     {
         printf("Malloc error.\n");
-        return NULL;
+        exit(EXIT_FAILURE);
     }
 
     plt->size = 32 * 1024 * 1024;
@@ -21,7 +21,7 @@ struct platform_t *platform_new()
     if ((plt->memory = malloc(plt->size * sizeof(uint8_t))) == NULL)
     {
         printf("Malloc error.\n");
-        return NULL;
+        exit(EXIT_FAILURE);
     }
 
     return plt;
@@ -35,12 +35,12 @@ void platform_free(struct platform_t *platform)
 
 void platform_load_program(struct platform_t *platform, const char *file_name)
 {
-    int fd = open(file_name, O_RDONLY);
+    int fp = open(file_name, O_RDONLY);
 
-    if (fd == -1)
+    if (fp == -1)
     {
         perror("Error while opening the bin file");
-        return NULL;
+        exit(EXIT_FAILURE);
     }
     else
     {
@@ -50,7 +50,7 @@ void platform_load_program(struct platform_t *platform, const char *file_name)
         if (e == -1)
         {
             perror("Error reading the length of the file");
-            return NULL;
+            exit(EXIT_FAILURE);
         }
 
         /* the size of the file (in uint32) */
@@ -61,13 +61,13 @@ void platform_load_program(struct platform_t *platform, const char *file_name)
         if ((buffer = malloc(size * sizeof(uint32_t))) == NULL)
         {
             perror("Malloc error");
-            return NULL;
+            exit(EXIT_FAILURE);
         }
 
-        if (read(fd, buffer, 4 * size) == -1)
+        if (read(fp, buffer, 4 * size) == -1)
         {
             perror("Error while reading the file");
-            return NULL;
+            exit(EXIT_FAILURE);
         }
         for (int i = 0; i < size; i += 1)
         {
@@ -78,7 +78,7 @@ void platform_load_program(struct platform_t *platform, const char *file_name)
 
         free(buffer);
     }
-    close(fd);
+    close(fp);
 }
 
 void save_to_memory(struct platform_t *platform, uint32_t *code, int size)
@@ -112,8 +112,8 @@ int platform_write(struct platform_t *platform, enum access_type_t access_type, 
     if (addr >= RAM_BASE && addr < RAM_BASE + platform->size)
     {
         /* Alignement check */
-        if ((access_type == ACCESS_WORD && addr & 0x3) ||
-            (access_type == ACCESS_HALF && addr & 0x1))
+        if ((((access_type == ACCESS_WORD) && addr) & 0x3) ||
+            (((access_type == ACCESS_HALF) && addr) & 0x1))
         {
             printf("Load address misaligned exception.\n");
             return -1;
@@ -126,7 +126,7 @@ int platform_write(struct platform_t *platform, enum access_type_t access_type, 
     /* Char out */
     else if (addr == 0x10000000)
     {
-        putchar(data);
+        printf("%c", data);
         return 0;
     }
     else if (addr == 0x10000004)
