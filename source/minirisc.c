@@ -116,16 +116,13 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case JALR_CODE:
     {
-        printf("JALR\n");
-        extend_sign(&imm_lui, 11);
+        // printf("JALR\n");
+        extend_sign(&imm, 11);
 
-        uint32_t target = minirisc->regs[rs_1] + imm_lui;
+        uint32_t target = minirisc->regs[rs_1] + imm;
         target &= ~0x1; /* LSB à 0 */
         minirisc->regs[rd] = minirisc->PC + 4;
         // printf("rd, minirisc->regs[rd]: %x, %x\n", rd, minirisc->regs[rd]);
-        printf("imm_lui: %x\n", imm_lui);
-        printf("rs_1: %x\n", rs_1);
-        printf("target: %x\n", target);
 
         minirisc->PC = target;
         minirisc->next_PC = minirisc->PC + 4;
@@ -136,7 +133,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     case BEQ_CODE:
     {
         imm <<= 1;
-        // Sign extension
         extend_sign(&imm, 13);
 
         uint32_t target = minirisc->PC + imm;
@@ -156,7 +152,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     case BNE_CODE:
     {
         imm <<= 1;
-        // Sign extension
         extend_sign(&imm, 13);
 
         uint32_t target = minirisc->PC + imm;
@@ -172,11 +167,10 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         }
         break;
     }
-
+    /* OK */
     case BLT_CODE:
     {
         imm <<= 1;
-        // Sign extension
         extend_sign(&imm, 13);
 
         uint32_t target = minirisc->PC + imm;
@@ -192,11 +186,10 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         }
         break;
     }
-
+    /* OK */
     case BGE_CODE:
     {
         imm <<= 1;
-        // Sign extension
         extend_sign(&imm, 13);
 
         uint32_t target = minirisc->PC + imm;
@@ -335,15 +328,15 @@ void extend_sign(uint32_t *imm, int n)
 {
     /* sign extension */
     uint32_t sign_bit = 1u << n; /* 1u to prevent undefined behavior */
-    uint32_t mask = (1u << (n + 1)) - 1;
+    uint32_t mask = ((1u << (32 - (n + 1))) - 1) << (n + 1);
 
     if (*imm & sign_bit) /* Si le bit de signe est à 1 */
     {
-        *imm |= ~mask;
+        *imm |= mask;
     }
     else
     {
-        *imm &= mask;
+        *imm &= ~mask;
     }
 }
 
@@ -352,7 +345,7 @@ void minirisc_run(struct minirisc_t *minirisc)
     while (!minirisc->halt)
     {
         minirisc_fetch(minirisc);
-        printf("\nInstruction %x at PC: %x\n", minirisc->IR, minirisc->PC);
+        // printf("\nInstruction %x at PC: %x\n", minirisc->IR, minirisc->PC);
         minirisc_decode_and_execute(minirisc);
     }
 }
