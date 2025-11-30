@@ -6,7 +6,8 @@ HEADER  = include
 CFILES  = $(notdir $(wildcard $(SOURCE)/*.c))
 OBJ     = $(addprefix $(BUILD)/, $(CFILES:.c=.o))
 DEPS    = $(OBJ:.o=.d)
-CFLAGS += -W -Wall
+# TODO: résoudre les warnings
+CFLAGS += -W -Wall -Wno-unused-variable -Wno-implicit-function-declaration
 CFLAGS += -O0 -g
 CFLAGS += -I$(INCLUDE)
 LDFLAGS = 

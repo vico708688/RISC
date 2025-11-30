@@ -8,7 +8,7 @@
 
 # Vérification du paramètre TEST
 ifndef TEST
-$(error Usage: make TEST=1  |  make TEST=2)
+$(error Usage: make TEST=i)
 endif
 
 # -------------------------------------------------------------------

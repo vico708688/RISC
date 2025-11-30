@@ -55,9 +55,4 @@ int platform_write(struct platform_t *plt, enum access_type_t access_type, uint3
  */
 void platform_load_program(struct platform_t *platform, const char *file_name);
 
-/**
- * Write the content of the file (converted to bytes) in the platform's memory
- */
-void save_to_memory(struct platform_t *platform, uint32_t *code, int size);
-
 #endif
