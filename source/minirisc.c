@@ -32,11 +32,9 @@ void minirisc_free(struct minirisc_t *minirisc)
 void minirisc_fetch(struct minirisc_t *minirisc)
 {
     uint32_t PC = minirisc->PC;
-    uint32_t instruction;
 
-    platform_read(minirisc->platform, ACCESS_WORD, PC, &instruction);
+    platform_read(minirisc->platform, ACCESS_WORD, PC, &minirisc->IR);
 
-    minirisc->IR = instruction;
     minirisc->next_PC = PC + 4;
 }
 
@@ -189,6 +187,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case BGE_CODE:
     {
+        // printf("BGE\n");
         imm <<= 1;
         extend_sign(&imm, 13);
 
@@ -205,7 +204,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         }
         break;
     }
-
+    /* OK: A revoir */
     case BLTU_CODE:
     {
         imm <<= 1;
@@ -225,7 +224,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         }
         break;
     }
-
+    /* OK: A revoir */
     case BGEU_CODE:
     {
         imm <<= 1;
@@ -248,11 +247,12 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SW_CODE:
     {
+        // printf("SW\n");
         extend_sign(&imm, 11);
-        uint32_t target = minirisc->regs[rs_1] + imm;
+        uint32_t addr = minirisc->regs[rs_1] + imm;
         uint32_t data = minirisc->regs[rd];
 
-        platform_write(minirisc->platform, ACCESS_WORD, target, data);
+        platform_write(minirisc->platform, ACCESS_WORD, addr, data);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -261,42 +261,80 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* A revoir */
     case SH_CODE:
     {
+        printf("SH\n");
         extend_sign(&imm, 11);
         uint32_t addr = minirisc->regs[rs_1] + imm;
         uint32_t data = minirisc->regs[rd];
 
         platform_write(minirisc->platform, ACCESS_HALF, addr, data);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-    /* A revoir */
+    /* A modifier */
     case SB_CODE:
     {
+        printf("SB\n");
         extend_sign(&imm, 11);
         uint32_t addr = minirisc->regs[rs_1] + imm;
         uint32_t data = minirisc->regs[rd];
+        printf("data, rd: %x, %d\n", data, rd);
+        printf("target: %x\n", addr);
 
         platform_write(minirisc->platform, ACCESS_BYTE, addr, data);
+        printf("data, rd: %x, %d\n", data, rd);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-    /* A revoir */
+    /* OK */
     case LW_CODE:
     {
+        // printf("LW\n");
         extend_sign(&imm, 11);
-        uint32_t target = minirisc->regs[rs_1] + imm;
-        uint32_t addr = minirisc->regs[rs_1];
+        uint32_t target_data = minirisc->regs[rs_1] + imm;
 
-        platform_read(minirisc->platform, ACCESS_WORD, target, &addr);
+        if (platform_read(minirisc->platform, ACCESS_WORD, target_data, &minirisc->regs[rd]) == -1)
+        {
+            minirisc->halt = 1;
+            break;
+        }
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
         break;
     }
     /* A revoir */
     case LH_CODE:
     {
+        printf("LH\n");
         extend_sign(&imm, 11);
         uint32_t target = minirisc->regs[rs_1] + imm;
         uint32_t addr = minirisc->regs[rd];
 
         platform_read(minirisc->platform, ACCESS_HALF, target, &addr);
         extend_sign(&addr, 11);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case LB_CODE:
+    {
+        // printf("LB\n");
+        extend_sign(&imm, 11);
+        uint32_t mem_addr = minirisc->regs[rs_1] + imm;
+        uint32_t ptr_addr = minirisc->regs[rd];
+
+        platform_read(minirisc->platform, ACCESS_BYTE, mem_addr, &ptr_addr);
+        extend_sign(&ptr_addr, 7);
+        printf("%x\n", ptr_addr);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
         break;
     }
     /* A revoir*/
@@ -307,6 +345,9 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         uint32_t addr = minirisc->regs[rs_1];
 
         platform_read(minirisc->platform, ACCESS_BYTE, target, &addr);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
         break;
     }
 
@@ -326,18 +367,20 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
 void extend_sign(uint32_t *imm, int n)
 {
-    /* sign extension */
-    uint32_t sign_bit = 1u << n; /* 1u to prevent undefined behavior */
-    uint32_t mask = ((1u << (32 - (n + 1))) - 1) << (n + 1);
+    // /* A modifier */
+    // /* sign extension */
+    // uint32_t sign_bit = 1 << n;
+    // uint32_t mask = ((1 << (32 - (n + 1))) - 1) << (n + 1);
 
-    if (*imm & sign_bit) /* Si le bit de signe est à 1 */
-    {
-        *imm |= mask;
-    }
-    else
-    {
-        *imm &= ~mask;
-    }
+    // if (*imm & sign_bit) /* Si le bit de signe est à 1 */
+    // {
+    //     *imm |= mask;
+    // }
+    // else
+    // {
+    //     *imm &= ~mask;
+    // }
+    *imm = (uint32_t)((int32_t)(*imm << (32 - (n + 1))) >> (32 - (n + 1)));
 }
 
 void minirisc_run(struct minirisc_t *minirisc)
@@ -345,7 +388,8 @@ void minirisc_run(struct minirisc_t *minirisc)
     while (!minirisc->halt)
     {
         minirisc_fetch(minirisc);
-        // printf("\nInstruction %x at PC: %x\n", minirisc->IR, minirisc->PC);
+        printf("\nInstruction %x at PC: %x\n", minirisc->IR, minirisc->PC);
         minirisc_decode_and_execute(minirisc);
+        /* A modifier: Ajouter minirisc->PC = minirisc->next_PC */
     }
 }
