@@ -35,6 +35,8 @@ void platform_free(struct platform_t *platform)
 
 void platform_load_program(struct platform_t *platform, const char *file_name)
 {
+    /* A refaire: utiliser fopen, fread */
+    /* Charger le code dans la mémoire */
     int fp = open(file_name, O_RDONLY);
 
     if (fp == -1)
@@ -74,74 +76,119 @@ void platform_load_program(struct platform_t *platform, const char *file_name)
             platform->memory[i] = buffer[i];
         }
 
-        // save_to_memory(platform, buffer, size);
-
         free(buffer);
     }
     close(fp);
 }
 
-void save_to_memory(struct platform_t *platform, uint32_t *code, int size)
-{
-    for (int i = 0; i < size; i += 1)
-    {
-        /* convert big endian to little-endian */
-        uint32_t little_endian = __builtin_bswap32(code[i]);
-
-        platform->memory[i] = little_endian; // remplacer par platform_write
-        printf("Byte: %d :\n\t - little endian : %08X\n\t - big endian    : %08X\n", i, little_endian, code[i]);
-    }
-}
-
 int platform_read(struct platform_t *platform, enum access_type_t access_type, uint32_t addr, uint32_t *data)
 {
-    /* Alignement check */
-    if ((access_type == ACCESS_WORD && addr & 0x3) ||
-        (access_type == ACCESS_HALF && addr & 0x1))
+    if (addr == CHAROUT_BASE)
     {
-        printf("Load address misaligned exception.\n");
-        return -1;
+        *data = 0x0;
+        return 0;
     }
 
-    *data = platform->memory[(addr - RAM_BASE) >> 2]; // dois-je diviser par 4 ?
+    /* Add: condition RAM */
+
+    switch (access_type)
+    {
+    case ACCESS_BYTE:
+    {
+        uint8_t *p = (uint8_t *)platform->memory;
+        *data = p[(addr - RAM_BASE)];
+    }
+    break;
+
+    case ACCESS_HALF:
+    {
+        /* Alignement check */
+        if (addr & 0x1)
+        {
+            printf("Load half address misaligned exception.\n");
+            return -1;
+        }
+        uint16_t *p = (uint16_t *)platform->memory;
+        *data = p[(addr - RAM_BASE) >> 1];
+    }
+    break;
+
+    case ACCESS_WORD:
+        /* Alignement check */
+        if (addr & 0x3)
+        {
+            printf("Load word address misaligned exception.\n");
+            return -1;
+        }
+        *data = platform->memory[(addr - RAM_BASE) >> 2];
+        break;
+
+    default:
+        printf("Error reading access.\n");
+        return -1;
+        break;
+    }
+
+    return 0;
 }
 
 int platform_write(struct platform_t *platform, enum access_type_t access_type, uint32_t addr, uint32_t data)
 {
     /* RAM */
-    if (addr >= RAM_BASE && addr < RAM_BASE + platform->size)
+    if ((addr >= RAM_BASE) && (addr < (RAM_BASE + platform->size)))
     {
-        /* Alignement check */
-        if ((((access_type == ACCESS_WORD) && addr) & 0x3) ||
-            (((access_type == ACCESS_HALF) && addr) & 0x1))
-        {
-            printf("Load address misaligned exception.\n");
-            return -1;
-        }
+        uint32_t index;
 
-        uint32_t index = (addr - RAM_BASE) >> 2;
+        switch (access_type)
+        {
+        case ACCESS_BYTE:
+            index = (addr - RAM_BASE);
+            break;
+
+        case ACCESS_HALF:
+            /* Alignement check */
+            if (addr & 0x1)
+            {
+                printf("Write half address misaligned exception.\n");
+                exit(1);
+            }
+            index = (addr - RAM_BASE) >> 1;
+            break;
+
+        case ACCESS_WORD:
+            /* Alignement check */
+            if (addr & 0x3)
+            {
+                printf("Write word address misaligned exception.\n");
+                exit(1);
+            }
+            index = (addr - RAM_BASE) >> 2;
+            break;
+
+        default:
+            printf("Error reading access.\n");
+            exit(1);
+            break;
+        }
 
         platform->memory[index] = data;
     }
-    /* Char out */
-    else if (addr == 0x10000000)
+    else if (addr == CHAROUT_BASE)
     {
-        printf("%c", data);
-        return 0;
+        printf("%c", (char)data);
     }
-    else if (addr == 0x10000004)
+    else if (addr == CHAROUT_BASE + 4)
     {
-        printf("%d", data);
-        return 0;
+        printf("%d", (int32_t)data);
     }
-    else if (addr == 0x10000008)
+    else if (addr == CHAROUT_BASE + 8)
     {
-        printf("%x", data);
-        return 0;
+        printf("0x%08x", data);
     }
     else
     {
-        printf("Illegal address.\n");
-        return -1;
+        exit(1);
     }
+
+    return 0;
 }
