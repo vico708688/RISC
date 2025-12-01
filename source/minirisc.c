@@ -258,10 +258,10 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-    /* A revoir */
+    /* OK */
     case SH_CODE:
     {
-        printf("SH\n");
+        // printf("SH\n");
         extend_sign(&imm, 11);
         uint32_t addr = minirisc->regs[rs_1] + imm;
         uint32_t data = minirisc->regs[rd];
@@ -289,7 +289,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case LW_CODE:
     {
-        printf("LW\n");
+        // printf("LW\n");
         extend_sign(&imm, 11);
         uint32_t target_data = minirisc->regs[rs_1] + imm;
 
