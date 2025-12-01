@@ -272,18 +272,15 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-    /* A modifier */
+    /* OK */
     case SB_CODE:
     {
-        printf("SB\n");
+        // printf("SB\n");
         extend_sign(&imm, 11);
         uint32_t addr = minirisc->regs[rs_1] + imm;
         uint32_t data = minirisc->regs[rd];
-        printf("data, rd: %x, %d\n", data, rd);
-        printf("target: %x\n", addr);
 
         platform_write(minirisc->platform, ACCESS_BYTE, addr, data);
-        printf("data, rd: %x, %d\n", data, rd);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -292,7 +289,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case LW_CODE:
     {
-        // printf("LW\n");
+        printf("LW\n");
         extend_sign(&imm, 11);
         uint32_t target_data = minirisc->regs[rs_1] + imm;
 
@@ -301,6 +298,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
             minirisc->halt = 1;
             break;
         }
+
+        printf("%x\n", minirisc->regs[rd]);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;

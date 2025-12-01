@@ -137,41 +137,42 @@ int platform_write(struct platform_t *platform, enum access_type_t access_type, 
     /* RAM */
     if ((addr >= RAM_BASE) && (addr < (RAM_BASE + platform->size)))
     {
-        uint32_t index;
-
         switch (access_type)
         {
         case ACCESS_BYTE:
-            index = (addr - RAM_BASE);
+        {
+            uint8_t *p = (uint8_t *)platform->memory;
+            p[(addr - RAM_BASE)] = data;
             break;
-
+        }
         case ACCESS_HALF:
+        {
             /* Alignement check */
             if (addr & 0x1)
             {
                 printf("Write half address misaligned exception.\n");
                 exit(1);
             }
-            index = (addr - RAM_BASE) >> 1;
+            uint16_t *p = (uint16_t *)platform->memory;
+            p[(addr - RAM_BASE) >> 1] = data;
             break;
-
+        }
         case ACCESS_WORD:
+        {
             /* Alignement check */
             if (addr & 0x3)
             {
                 printf("Write word address misaligned exception.\n");
                 exit(1);
             }
-            index = (addr - RAM_BASE) >> 2;
+            platform->memory[(addr - RAM_BASE) >> 2] = data;
             break;
-
+        }
         default:
             printf("Error reading access.\n");
             exit(1);
             break;
         }
-
-        platform->memory[index] = data;
     }
     else if (addr == CHAROUT_BASE)
     {
@@ -187,6 +188,7 @@ int platform_write(struct platform_t *platform, enum access_type_t access_type, 
     }
     else
     {
+        printf("Segmentation Fault.\n");
         exit(1);
     }
 
