@@ -308,13 +308,13 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* A revoir */
     case LH_CODE:
     {
-        printf("LH\n");
+        // printf("LH\n");
         extend_sign(&imm, 11);
         uint32_t target = minirisc->regs[rs_1] + imm;
         uint32_t addr = minirisc->regs[rd];
 
         platform_read(minirisc->platform, ACCESS_HALF, target, &addr);
-        extend_sign(&addr, 11);
+        extend_sign(&addr, 15);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -330,20 +330,20 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
         platform_read(minirisc->platform, ACCESS_BYTE, mem_addr, &ptr_addr);
         extend_sign(&ptr_addr, 7);
-        printf("%x\n", ptr_addr);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-    /* A revoir*/
+    /* OK */
     case LHU_CODE:
     {
         extend_sign(&imm, 11);
         uint32_t target = minirisc->regs[rs_1] + imm;
-        uint32_t addr = minirisc->regs[rs_1];
+        uint32_t addr = minirisc->regs[rd];
 
-        platform_read(minirisc->platform, ACCESS_BYTE, target, &addr);
+        platform_read(minirisc->platform, ACCESS_HALF, target, &addr);
+        addr &= 0xFFFF;
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
