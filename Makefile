@@ -7,7 +7,7 @@ CFILES  = $(notdir $(wildcard $(SOURCE)/*.c))
 OBJ     = $(addprefix $(BUILD)/, $(CFILES:.c=.o))
 DEPS    = $(OBJ:.o=.d)
 # TODO: résoudre les warnings
-CFLAGS += -W -Wall -Wno-unused-variable -Wno-implicit-function-declaration
+CFLAGS += -W -Wall -Werror -Wno-unused-variable
 CFLAGS += -O0 -g
 CFLAGS += -I$(INCLUDE)
 LDFLAGS = 

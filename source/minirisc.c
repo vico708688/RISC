@@ -5,6 +5,12 @@
 #include "minirisc.h"
 #include "platform.h"
 
+/* DEBUG */
+void print(uint64_t value)
+{
+    printf("%ld\n", value);
+}
+
 struct minirisc_t *minirisc_new(uint32_t initial_PC, struct platform_t *platform)
 {
     struct minirisc_t *cpu;
@@ -238,7 +244,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SW_CODE:
     {
-        // printf("SW\n");
         extend_sign(&imm, 11);
         uint32_t addr = minirisc->regs[rs_1] + imm;
         uint32_t data = minirisc->regs[rd];
@@ -382,18 +387,64 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
+    /* A revoir */
+    case MULH_CODE:
+    {
+        minirisc->regs[rd] = ((int64_t)minirisc->regs[rs_1] * (int64_t)minirisc->regs[rs2]) >> 32;
 
-        /* TODO: Add every instructions */
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* A revoir */
+    case MULHU_CODE:
+    {
+        minirisc->regs[rd] = ((uint64_t)minirisc->regs[rs_1] * (uint64_t)minirisc->regs[rs2]) >> 32;
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* A revoir */
+    case MULHSU_CODE:
+    {
+        minirisc->regs[rd] = ((int64_t)minirisc->regs[rs_1] * (uint64_t)minirisc->regs[rs2]) >> 32;
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* A revoir */
+    case DIV_CODE:
+    {
+        if (minirisc->regs[rs2] == 0)
+        {
+            minirisc->regs[rd] = -1;
+        }
+        else if (minirisc->regs[rs_1] == -INT_MAX && minirisc->regs[rs2] == (uint32_t)-1)
+        {
+            minirisc->regs[rd] = -INT_MAX;
+        }
+        else
+        {
+            printf("%d, %d, %d\n", minirisc->regs[rs_1], minirisc->regs[rs2], minirisc->regs[rs_1] / minirisc->regs[rs2]);
+            minirisc->regs[rd] = minirisc->regs[rs_1] / minirisc->regs[rs2];
+        }
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
 
     default:
     {
-        printf("Unknown opcode : %x.\n", opcode);
+        printf("Unknown opcode : %x\n", opcode);
         minirisc->halt = 1;
         break;
     }
     }
 
-    /* A modifier: comment forcer le registre x0 à 0 */
+    /* A modifier: forcer le registre x0 à 0 lors de l'écriture dans le registre x0 */
     // minirisc->regs[0] = 0; /* Le registre x0 est cablé en dur à 0 */
 }
 
@@ -412,7 +463,7 @@ void minirisc_run(struct minirisc_t *minirisc)
     while (!minirisc->halt)
     {
         minirisc_fetch(minirisc);
-        printf("\nInstruction %x at PC: %x\n", minirisc->IR, minirisc->PC);
+        // printf("\nInstruction %x at PC: %x\n", minirisc->IR, minirisc->PC);
         minirisc_decode_and_execute(minirisc);
         /* A modifier: Ajouter minirisc->PC = minirisc->next_PC */
     }
