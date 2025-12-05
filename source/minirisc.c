@@ -19,6 +19,7 @@ struct minirisc_t *minirisc_new(uint32_t initial_PC, struct platform_t *platform
     cpu->IR = platform->memory[initial_PC - RAM_BASE];
     cpu->next_PC = initial_PC;
     cpu->platform = platform;
+    cpu->regs[0] = 0;
     cpu->halt = 0;
 
     return cpu;
@@ -46,7 +47,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
     uint32_t rd = (instr >> 7) & 0x1F;
     uint32_t rs_1 = (instr >> 12) & 0x1F;
-    uint32_t rs2 = (instr >> 16) & 0x1F;
+    uint32_t rs2 = (instr >> 17) & 0x1F;
 
     uint32_t imm = (instr >> 20) & 0xFFF;
     uint32_t imm_lui = (instr >> 12) & 0xFFFFF;
@@ -63,7 +64,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case LUI_CODE:
     {
-        minirisc->regs[rd] = (imm_lui << 12);
+        minirisc->regs[rd] = imm_lui << 12;
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -75,15 +76,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         // printf("ADDI\n");
         extend_sign(&imm, 11);
         minirisc->regs[rd] = minirisc->regs[rs_1] + imm;
-
-        minirisc->PC = minirisc->next_PC;
-        minirisc->next_PC = minirisc->PC + 4;
-        break;
-    }
-    /* OK */
-    case EBREAK_CODE:
-    {
-        minirisc->halt = 1;
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -126,7 +118,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-    /* Revoir types B: extend_sign(&imm, ??? 13 ???) */
     /* OK */
     case BEQ_CODE:
     {
@@ -204,7 +195,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         }
         break;
     }
-    /* OK: A revoir */
+    /* OK */
     case BLTU_CODE:
     {
         imm <<= 1;
@@ -224,7 +215,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         }
         break;
     }
-    /* OK: A revoir */
+    /* OK */
     case BGEU_CODE:
     {
         imm <<= 1;
@@ -321,6 +312,20 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         break;
     }
     /* OK */
+    case LHU_CODE:
+    {
+        extend_sign(&imm, 11);
+        uint32_t target = minirisc->regs[rs_1] + imm;
+        uint32_t addr = minirisc->regs[rd];
+
+        platform_read(minirisc->platform, ACCESS_HALF, target, &addr);
+        addr &= 0xFFFF;
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
     case LB_CODE:
     {
         // printf("LB\n");
@@ -335,15 +340,43 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-    /* OK */
-    case LHU_CODE:
+    /* OK: a tester */
+    case LBU_CODE:
     {
+        // printf("LBU\n");
         extend_sign(&imm, 11);
-        uint32_t target = minirisc->regs[rs_1] + imm;
-        uint32_t addr = minirisc->regs[rd];
+        uint32_t mem_addr = minirisc->regs[rs_1] + imm;
+        uint32_t ptr_addr = minirisc->regs[rd];
 
-        platform_read(minirisc->platform, ACCESS_HALF, target, &addr);
-        addr &= 0xFFFF;
+        platform_read(minirisc->platform, ACCESS_BYTE, mem_addr, &ptr_addr);
+        ptr_addr &= 0xFF;
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case EBREAK_CODE:
+    {
+        minirisc->halt = 1;
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case ECALL_CODE:
+    {
+        minirisc->regs[10] = -1;
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case MUL_CODE:
+    {
+        minirisc->regs[rd] = minirisc->regs[rs_1] * minirisc->regs[rs2];
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -361,25 +394,17 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     }
 
     /* A modifier: comment forcer le registre x0 à 0 */
-    minirisc->regs[0] = 0; /* Le registre x0 est cablé en dur à 0 */
+    // minirisc->regs[0] = 0; /* Le registre x0 est cablé en dur à 0 */
 }
 
 void extend_sign(uint32_t *imm, int n)
 {
-    // /* A modifier */
-    // /* sign extension */
-    // uint32_t sign_bit = 1 << n;
-    // uint32_t mask = ((1 << (32 - (n + 1))) - 1) << (n + 1);
-
-    // if (*imm & sign_bit) /* Si le bit de signe est à 1 */
-    // {
-    //     *imm |= mask;
-    // }
-    // else
-    // {
-    //     *imm &= ~mask;
-    // }
     *imm = (uint32_t)((int32_t)(*imm << (32 - (n + 1))) >> (32 - (n + 1)));
+}
+
+void set_reg(int reg, uint32_t value, struct minirisc_t *minirisc)
+{
+    minirisc->regs[reg] = value & ((reg == 0) - 1);
 }
 
 void minirisc_run(struct minirisc_t *minirisc)

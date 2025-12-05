@@ -83,7 +83,7 @@ void platform_load_program(struct platform_t *platform, const char *file_name)
 
 int platform_read(struct platform_t *platform, enum access_type_t access_type, uint32_t addr, uint32_t *data)
 {
-    if (addr == CHAROUT_BASE)
+    if (addr == CHAROUT_BASE || addr == CHAROUT_BASE + 4 || addr == CHAROUT_BASE + 8)
     {
         *data = 0x0;
         return 0;
