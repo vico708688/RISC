@@ -61,7 +61,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     uint32_t shamt = (instr >> 20) & 0x1F;
     uint32_t shamt_zeros = (instr >> 25) & 0x7F;
 
-    /* next_PC update */
+    /* next_PC update : a revoir */
     minirisc->next_PC = minirisc->PC + 4;
 
     /* Depends of the opcode's value */
@@ -71,17 +71,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     case LUI_CODE:
     {
         minirisc->regs[rd] = imm_lui << 12;
-
-        minirisc->PC = minirisc->next_PC;
-        minirisc->next_PC = minirisc->PC + 4;
-        break;
-    }
-    /* OK */
-    case ADDI_CODE:
-    {
-        // printf("ADDI\n");
-        extend_sign(&imm, 11);
-        minirisc->regs[rd] = minirisc->regs[rs_1] + imm;
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -242,41 +231,30 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         break;
     }
     /* OK */
-    case SW_CODE:
+    case LB_CODE:
     {
+        // printf("LB\n");
         extend_sign(&imm, 11);
-        uint32_t addr = minirisc->regs[rs_1] + imm;
-        uint32_t data = minirisc->regs[rd];
+        uint32_t mem_addr = minirisc->regs[rs_1] + imm;
+        uint32_t ptr_addr = minirisc->regs[rd];
 
-        platform_write(minirisc->platform, ACCESS_WORD, addr, data);
+        platform_read(minirisc->platform, ACCESS_BYTE, mem_addr, &ptr_addr);
+        extend_sign(&ptr_addr, 7);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
     /* OK */
-    case SH_CODE:
+    case LH_CODE:
     {
-        // printf("SH\n");
+        // printf("LH\n");
         extend_sign(&imm, 11);
-        uint32_t addr = minirisc->regs[rs_1] + imm;
-        uint32_t data = minirisc->regs[rd];
+        uint32_t target = minirisc->regs[rs_1] + imm;
+        uint32_t addr = minirisc->regs[rd];
 
-        platform_write(minirisc->platform, ACCESS_HALF, addr, data);
-
-        minirisc->PC = minirisc->next_PC;
-        minirisc->next_PC = minirisc->PC + 4;
-        break;
-    }
-    /* OK */
-    case SB_CODE:
-    {
-        // printf("SB\n");
-        extend_sign(&imm, 11);
-        uint32_t addr = minirisc->regs[rs_1] + imm;
-        uint32_t data = minirisc->regs[rd];
-
-        platform_write(minirisc->platform, ACCESS_BYTE, addr, data);
+        platform_read(minirisc->platform, ACCESS_HALF, target, &addr);
+        extend_sign(&addr, 15);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -301,16 +279,16 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-    /* A revoir */
-    case LH_CODE:
+    /* OK: a tester */
+    case LBU_CODE:
     {
-        // printf("LH\n");
+        // printf("LBU\n");
         extend_sign(&imm, 11);
-        uint32_t target = minirisc->regs[rs_1] + imm;
-        uint32_t addr = minirisc->regs[rd];
+        uint32_t mem_addr = minirisc->regs[rs_1] + imm;
+        uint32_t ptr_addr = minirisc->regs[rd];
 
-        platform_read(minirisc->platform, ACCESS_HALF, target, &addr);
-        extend_sign(&addr, 15);
+        platform_read(minirisc->platform, ACCESS_BYTE, mem_addr, &ptr_addr);
+        ptr_addr &= 0xFF;
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -331,30 +309,111 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         break;
     }
     /* OK */
-    case LB_CODE:
+    case SB_CODE:
     {
-        // printf("LB\n");
+        // printf("SB\n");
         extend_sign(&imm, 11);
-        uint32_t mem_addr = minirisc->regs[rs_1] + imm;
-        uint32_t ptr_addr = minirisc->regs[rd];
+        uint32_t addr = minirisc->regs[rs_1] + imm;
+        uint32_t data = minirisc->regs[rd];
 
-        platform_read(minirisc->platform, ACCESS_BYTE, mem_addr, &ptr_addr);
-        extend_sign(&ptr_addr, 7);
+        platform_write(minirisc->platform, ACCESS_BYTE, addr, data);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-    /* OK: a tester */
-    case LBU_CODE:
+    /* OK */
+    case SH_CODE:
     {
-        // printf("LBU\n");
+        // printf("SH\n");
         extend_sign(&imm, 11);
-        uint32_t mem_addr = minirisc->regs[rs_1] + imm;
-        uint32_t ptr_addr = minirisc->regs[rd];
+        uint32_t addr = minirisc->regs[rs_1] + imm;
+        uint32_t data = minirisc->regs[rd];
 
-        platform_read(minirisc->platform, ACCESS_BYTE, mem_addr, &ptr_addr);
-        ptr_addr &= 0xFF;
+        platform_write(minirisc->platform, ACCESS_HALF, addr, data);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case SW_CODE:
+    {
+        extend_sign(&imm, 11);
+        uint32_t addr = minirisc->regs[rs_1] + imm;
+        uint32_t data = minirisc->regs[rd];
+
+        platform_write(minirisc->platform, ACCESS_WORD, addr, data);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case ADDI_CODE:
+    {
+        // printf("ADDI\n");
+        extend_sign(&imm, 11);
+        minirisc->regs[rd] = minirisc->regs[rs_1] + imm;
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+
+    /* Ajouter de SLTI */
+
+    /* A revoir */
+    case SLTI_CODE:
+    {
+        extend_sign(&imm, 11);
+
+        if (minirisc->regs[rs_1] < imm)
+        {
+            minirisc->regs[rd] = 1;
+        }
+        else
+        {
+            minirisc->regs[rd] = 0;
+        }
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+    }
+    /* A revoir */
+    case SLTIU_CODE:
+    {
+        extend_sign(&imm, 11);
+
+        if (minirisc->regs[rs_1] < (uint32_t)imm)
+        {
+            minirisc->regs[rd] = 1;
+        }
+        else
+        {
+            minirisc->regs[rd] = 0;
+        }
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+    }
+    /* A revoir */
+    case XORI_CODE:
+    {
+        extend_sign(&imm, 11);
+
+        minirisc->regs[rd] = minirisc->regs[rs_1] | imm;
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+    }
+
+    /* Jusqu'à AND */
+
+    /* OK */
+    case ECALL_CODE:
+    {
+        minirisc->regs[10] = -1;
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -364,15 +423,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     case EBREAK_CODE:
     {
         minirisc->halt = 1;
-
-        minirisc->PC = minirisc->next_PC;
-        minirisc->next_PC = minirisc->PC + 4;
-        break;
-    }
-    /* OK */
-    case ECALL_CODE:
-    {
-        minirisc->regs[10] = -1;
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -408,7 +458,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* A revoir */
     case MULHSU_CODE:
     {
-        minirisc->regs[rd] = ((int64_t)minirisc->regs[rs_1] * (uint64_t)minirisc->regs[rs2]) >> 32;
+        minirisc->regs[rd] = (((int64_t)minirisc->regs[rs_1] * (uint64_t)minirisc->regs[rs2]) >> 32);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -427,8 +477,61 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         }
         else
         {
-            printf("%d, %d, %d\n", minirisc->regs[rs_1], minirisc->regs[rs2], minirisc->regs[rs_1] / minirisc->regs[rs2]);
+            printf("%d, %d, %d\n", minirisc->regs[rs_1], minirisc->regs[rs2], (int32_t)minirisc->regs[rs_1] / (int32_t)minirisc->regs[rs2]);
             minirisc->regs[rd] = minirisc->regs[rs_1] / minirisc->regs[rs2];
+        }
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* A revoir */
+    case REM_CODE:
+    {
+        if (minirisc->regs[rs2] == 0)
+        {
+            minirisc->regs[rd] = minirisc->regs[rs_1];
+        }
+        else if (minirisc->regs[rs_1] == -INT_MAX && minirisc->regs[rs2] == (uint32_t)-1)
+        {
+            minirisc->regs[rd] = 0;
+        }
+        else
+        {
+            minirisc->regs[rd] = minirisc->regs[rs_1] - minirisc->regs[rs2] * ((int32_t)minirisc->regs[rs_1] / (int32_t)minirisc->regs[rs2]);
+        }
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* A revoir */
+    case DIVU_CODE:
+    {
+        if (minirisc->regs[rs2] == 0)
+        {
+            minirisc->regs[rd] = 2 * INT_MAX - 1;
+        }
+        else
+        {
+            printf("%d, %d, %d\n", minirisc->regs[rs_1], minirisc->regs[rs2], (int32_t)minirisc->regs[rs_1] / (int32_t)minirisc->regs[rs2]);
+            minirisc->regs[rd] = (int32_t)(minirisc->regs[rs_1] / minirisc->regs[rs2]);
+        }
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* A revoir */
+    case REMU_CODE:
+    {
+        if (minirisc->regs[rs2] == 0)
+        {
+            minirisc->regs[rd] = minirisc->regs[rs_1];
+        }
+        else
+        {
+            minirisc->regs[rd] = minirisc->regs[rs_1] - minirisc->regs[rs2] * (int32_t)((int32_t)minirisc->regs[rs_1] / (int32_t)minirisc->regs[rs2]);
         }
 
         minirisc->PC = minirisc->next_PC;
