@@ -60,15 +60,13 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
     uint32_t shamt = (instr >> 20) & 0x1F;
 
-    /* next_PC update : a revoir */
-    minirisc->next_PC = minirisc->PC + 4;
-
     switch (opcode)
     {
     /* OK */
     case LUI_CODE:
     {
-        minirisc->regs[rd] = imm_lui << 12;
+        uint32_t value = imm_lui << 12;
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -77,7 +75,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case AUIPC_CODE:
     {
-        minirisc->regs[rd] = minirisc->PC + (imm_lui << 12);
+        uint32_t value = minirisc->PC + (imm_lui << 12);
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -90,7 +89,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         extend_sign(&imm_lui, 20);
 
         uint32_t target = minirisc->PC + imm_lui;
-        minirisc->regs[rd] = minirisc->PC + 4;
+        uint32_t value = minirisc->PC + 4;
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = target;
         minirisc->next_PC = minirisc->PC + 4;
@@ -103,7 +103,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
         uint32_t target = minirisc->regs[rs_1] + imm;
         target &= ~0x1; /* LSB à 0 */
-        minirisc->regs[rd] = minirisc->PC + 4;
+        uint32_t value = minirisc->PC + 4;
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = target;
         minirisc->next_PC = minirisc->PC + 4;
@@ -340,7 +341,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     case ADDI_CODE:
     {
         extend_sign(&imm, 11);
-        minirisc->regs[rd] = minirisc->regs[rs_1] + imm;
+        uint32_t value = minirisc->regs[rs_1] + imm;
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -353,11 +355,13 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
         if (minirisc->regs[rs_1] < imm)
         {
-            minirisc->regs[rd] = 1;
+            uint32_t value = 1;
+            set_reg(minirisc, rd, value);
         }
         else
         {
-            minirisc->regs[rd] = 0;
+            uint32_t value = 0;
+            set_reg(minirisc, rd, value);
         }
 
         minirisc->PC = minirisc->next_PC;
@@ -371,11 +375,13 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
         if (minirisc->regs[rs_1] < (uint32_t)imm)
         {
-            minirisc->regs[rd] = 1;
+            uint32_t value = 1;
+            set_reg(minirisc, rd, value);
         }
         else
         {
-            minirisc->regs[rd] = 0;
+            uint32_t value = 0;
+            set_reg(minirisc, rd, value);
         }
 
         minirisc->PC = minirisc->next_PC;
@@ -387,7 +393,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     {
         extend_sign(&imm, 11);
 
-        minirisc->regs[rd] = (minirisc->regs[rs_1] & (0xFFFFFFFF - imm)) | ((0xFFFFFFFF - minirisc->regs[rs_1]) & imm);
+        uint32_t value = (minirisc->regs[rs_1] & (0xFFFFFFFF - imm)) | ((0xFFFFFFFF - minirisc->regs[rs_1]) & imm);
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -398,7 +405,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     {
         extend_sign(&imm, 11);
 
-        minirisc->regs[rd] = minirisc->regs[rs_1] | imm;
+        uint32_t value = minirisc->regs[rs_1] | imm;
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -409,7 +417,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     {
         extend_sign(&imm, 11);
 
-        minirisc->regs[rd] = minirisc->regs[rs_1] & imm;
+        uint32_t value = minirisc->regs[rs_1] & imm;
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -418,7 +427,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SLLI_CODE:
     {
-        minirisc->regs[rd] = minirisc->regs[rs_1] << shamt;
+        uint32_t value = minirisc->regs[rs_1] << shamt;
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -427,7 +437,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SRLI_CODE:
     {
-        minirisc->regs[rd] = minirisc->regs[rs_1] >> shamt;
+        uint32_t value = minirisc->regs[rs_1] >> shamt;
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -436,7 +447,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SRAI_CODE:
     {
-        minirisc->regs[rd] = (uint32_t)((int32_t)minirisc->regs[rs_1] >> shamt);
+        uint32_t value = (uint32_t)((int32_t)minirisc->regs[rs_1] >> shamt);
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -445,7 +457,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case ADD_CODE:
     {
-        minirisc->regs[rd] = minirisc->regs[rs_1] + minirisc->regs[rs2];
+        uint32_t value = minirisc->regs[rs_1] + minirisc->regs[rs2];
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -454,7 +467,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SUB_CODE:
     {
-        minirisc->regs[rd] = minirisc->regs[rs_1] - minirisc->regs[rs2];
+        uint32_t value = minirisc->regs[rs_1] - minirisc->regs[rs2];
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -463,7 +477,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SLL_CODE:
     {
-        minirisc->regs[rd] = minirisc->regs[rs_1] << (minirisc->regs[rs2] & 0x1F);
+        uint32_t value = minirisc->regs[rs_1] << (minirisc->regs[rs2] & 0x1F);
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -472,7 +487,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SRL_CODE:
     {
-        minirisc->regs[rd] = minirisc->regs[rs_1] >> (minirisc->regs[rs2] & 0x1F);
+        uint32_t value = minirisc->regs[rs_1] >> (minirisc->regs[rs2] & 0x1F);
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -481,7 +497,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SRA_CODE:
     {
-        minirisc->regs[rd] = (uint32_t)((int32_t)minirisc->regs[rs_1] >> (minirisc->regs[rs2] & 0x1F));
+        uint32_t value = (uint32_t)((int32_t)minirisc->regs[rs_1] >> (minirisc->regs[rs2] & 0x1F));
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -492,11 +509,13 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     {
         if ((int32_t)minirisc->regs[rs_1] < (int32_t)minirisc->regs[rs2])
         {
-            minirisc->regs[rd] = 1;
+            uint32_t value = 1;
+            set_reg(minirisc, rd, value);
         }
         else
         {
-            minirisc->regs[rd] = 0;
+            uint32_t value = 0;
+            set_reg(minirisc, rd, value);
         }
 
         minirisc->PC = minirisc->next_PC;
@@ -508,11 +527,13 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     {
         if (minirisc->regs[rs_1] < minirisc->regs[rs2])
         {
-            minirisc->regs[rd] = 1;
+            uint32_t value = 1;
+            set_reg(minirisc, rd, value);
         }
         else
         {
-            minirisc->regs[rd] = 0;
+            uint32_t value = 0;
+            set_reg(minirisc, rd, value);
         }
 
         minirisc->PC = minirisc->next_PC;
@@ -522,7 +543,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case XOR_CODE:
     {
-        minirisc->regs[rd] = (minirisc->regs[rs_1] & (0xFFFFFFFF - minirisc->regs[rs2])) | ((0xFFFFFFFF - minirisc->regs[rs_1]) & minirisc->regs[rs2]);
+        uint32_t value = (minirisc->regs[rs_1] & (0xFFFFFFFF - minirisc->regs[rs2])) | ((0xFFFFFFFF - minirisc->regs[rs_1]) & minirisc->regs[rs2]);
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -531,7 +553,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case OR_CODE:
     {
-        minirisc->regs[rd] = minirisc->regs[rs_1] | minirisc->regs[rs2];
+        uint32_t value = minirisc->regs[rs_1] | minirisc->regs[rs2];
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -540,7 +563,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case AND_CODE:
     {
-        minirisc->regs[rd] = minirisc->regs[rs_1] & minirisc->regs[rs2];
+        uint32_t value = minirisc->regs[rs_1] & minirisc->regs[rs2];
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -549,7 +573,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case ECALL_CODE:
     {
-        minirisc->regs[10] = -1;
+        set_reg(minirisc, 10, -1);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -567,7 +591,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case MUL_CODE:
     {
-        minirisc->regs[rd] = minirisc->regs[rs_1] * minirisc->regs[rs2];
+        uint32_t value = minirisc->regs[rs_1] * minirisc->regs[rs2];
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -576,7 +601,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* A revoir */
     case MULH_CODE:
     {
-        minirisc->regs[rd] = ((int64_t)minirisc->regs[rs_1] * (int64_t)minirisc->regs[rs2]) >> 32;
+        uint32_t value = ((int64_t)minirisc->regs[rs_1] * (int64_t)minirisc->regs[rs2]) >> 32;
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -585,7 +611,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* A revoir */
     case MULHU_CODE:
     {
-        minirisc->regs[rd] = ((uint64_t)minirisc->regs[rs_1] * (uint64_t)minirisc->regs[rs2]) >> 32;
+        uint32_t value = ((uint64_t)minirisc->regs[rs_1] * (uint64_t)minirisc->regs[rs2]) >> 32;
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -594,7 +621,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* A revoir */
     case MULHSU_CODE:
     {
-        minirisc->regs[rd] = (((int64_t)minirisc->regs[rs_1] * (uint64_t)minirisc->regs[rs2]) >> 32);
+        uint32_t value = (((int64_t)minirisc->regs[rs_1] * (uint64_t)minirisc->regs[rs2]) >> 32);
+        set_reg(minirisc, rd, value);
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
@@ -605,16 +633,18 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     {
         if (minirisc->regs[rs2] == 0)
         {
-            minirisc->regs[rd] = -1;
+            uint32_t value = -1;
+            set_reg(minirisc, rd, value);
         }
         else if (minirisc->regs[rs_1] == -INT_MAX && minirisc->regs[rs2] == (uint32_t)-1)
         {
-            minirisc->regs[rd] = -INT_MAX;
+            uint32_t value = -INT_MAX;
+            set_reg(minirisc, rd, value);
         }
         else
         {
-            printf("%d, %d, %d\n", minirisc->regs[rs_1], minirisc->regs[rs2], (int32_t)minirisc->regs[rs_1] / (int32_t)minirisc->regs[rs2]);
-            minirisc->regs[rd] = minirisc->regs[rs_1] / minirisc->regs[rs2];
+            uint32_t value = minirisc->regs[rs_1] / minirisc->regs[rs2];
+            set_reg(minirisc, rd, value);
         }
 
         minirisc->PC = minirisc->next_PC;
@@ -626,15 +656,18 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     {
         if (minirisc->regs[rs2] == 0)
         {
-            minirisc->regs[rd] = minirisc->regs[rs_1];
+            uint32_t value = minirisc->regs[rs_1];
+            set_reg(minirisc, rd, value);
         }
         else if (minirisc->regs[rs_1] == -INT_MAX && minirisc->regs[rs2] == (uint32_t)-1)
         {
-            minirisc->regs[rd] = 0;
+            uint32_t value = 0;
+            set_reg(minirisc, rd, value);
         }
         else
         {
-            minirisc->regs[rd] = minirisc->regs[rs_1] - minirisc->regs[rs2] * ((int32_t)minirisc->regs[rs_1] / (int32_t)minirisc->regs[rs2]);
+            uint32_t value = minirisc->regs[rs_1] - minirisc->regs[rs2] * ((int32_t)minirisc->regs[rs_1] / (int32_t)minirisc->regs[rs2]);
+            set_reg(minirisc, rd, value);
         }
 
         minirisc->PC = minirisc->next_PC;
@@ -646,12 +679,13 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     {
         if (minirisc->regs[rs2] == 0)
         {
-            minirisc->regs[rd] = 2 * INT_MAX - 1;
+            uint32_t value = 2 * INT_MAX - 1;
+            set_reg(minirisc, rd, value);
         }
         else
         {
-            printf("%d, %d, %d\n", minirisc->regs[rs_1], minirisc->regs[rs2], (int32_t)minirisc->regs[rs_1] / (int32_t)minirisc->regs[rs2]);
-            minirisc->regs[rd] = (int32_t)(minirisc->regs[rs_1] / minirisc->regs[rs2]);
+            uint32_t value = (int32_t)(minirisc->regs[rs_1] / minirisc->regs[rs2]);
+            set_reg(minirisc, rd, value);
         }
 
         minirisc->PC = minirisc->next_PC;
@@ -663,11 +697,13 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     {
         if (minirisc->regs[rs2] == 0)
         {
-            minirisc->regs[rd] = minirisc->regs[rs_1];
+            uint32_t value = minirisc->regs[rs_1];
+            set_reg(minirisc, rd, value);
         }
         else
         {
-            minirisc->regs[rd] = minirisc->regs[rs_1] - minirisc->regs[rs2] * (int32_t)((int32_t)minirisc->regs[rs_1] / (int32_t)minirisc->regs[rs2]);
+            uint32_t value = minirisc->regs[rs_1] - minirisc->regs[rs2] * (int32_t)((int32_t)minirisc->regs[rs_1] / (int32_t)minirisc->regs[rs2]);
+            set_reg(minirisc, rd, value);
         }
 
         minirisc->PC = minirisc->next_PC;
@@ -683,8 +719,8 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     }
     }
 
-    /* A modifier: forcer le registre x0 à 0 lors de l'écriture dans le registre x0 */
-    // minirisc->regs[0] = 0; /* Le registre x0 est cablé en dur à 0 */
+    /* next_PC update : a revoir */
+    // minirisc->next_PC = minirisc->PC + 4;
 }
 
 void extend_sign(uint32_t *imm, int n)
@@ -692,9 +728,9 @@ void extend_sign(uint32_t *imm, int n)
     *imm = (uint32_t)((int32_t)(*imm << (32 - (n + 1))) >> (32 - (n + 1)));
 }
 
-void set_reg(int reg, uint32_t value, struct minirisc_t *minirisc)
+void set_reg(struct minirisc_t *minirisc, int reg, uint32_t value)
 {
-    minirisc->regs[reg] = value & ((reg == 0) - 1);
+    minirisc->regs[reg] = value & ((reg == 0) - 1); /* We force the reg[0] to 0 during the writing */
 }
 
 void minirisc_run(struct minirisc_t *minirisc)

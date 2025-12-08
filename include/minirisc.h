@@ -43,4 +43,6 @@ void minirisc_run(struct minirisc_t *minirisc);
 
 void extend_sign(uint32_t *imm, int n);
 
+void set_reg(struct minirisc_t *minirisc, int reg, uint32_t value);
+
 #endif
