@@ -65,7 +65,7 @@ $(BUILD)/$(TARGET).bin: $(BUILD)/$(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
 
 $(BUILD)/$(TARGET).lss: $(BUILD)/$(TARGET).elf
-	$(OBJDUMP) -D $< > $@
+	$(OBJDUMP) -M no-aliases -h -D $< > $@
 
 # Nettoyage
 clean:
