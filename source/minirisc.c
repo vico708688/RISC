@@ -49,7 +49,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 {
     uint32_t instr = minirisc->IR;
 
-    uint32_t opcode = instr & 0x7F; /* apply a mask to get the 7 LSB */
+    uint32_t opcode = instr & 0x7F;
 
     uint32_t rd = (instr >> 7) & 0x1F;
     uint32_t rs_1 = (instr >> 12) & 0x1F;
@@ -59,12 +59,10 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     uint32_t imm_lui = (instr >> 12) & 0xFFFFF;
 
     uint32_t shamt = (instr >> 20) & 0x1F;
-    uint32_t shamt_zeros = (instr >> 25) & 0x7F;
 
     /* next_PC update : a revoir */
     minirisc->next_PC = minirisc->PC + 4;
 
-    /* Depends of the opcode's value */
     switch (opcode)
     {
     /* OK */
@@ -101,13 +99,11 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case JALR_CODE:
     {
-        // printf("JALR\n");
         extend_sign(&imm, 11);
 
         uint32_t target = minirisc->regs[rs_1] + imm;
         target &= ~0x1; /* LSB à 0 */
         minirisc->regs[rd] = minirisc->PC + 4;
-        // printf("rd, minirisc->regs[rd]: %x, %x\n", rd, minirisc->regs[rd]);
 
         minirisc->PC = target;
         minirisc->next_PC = minirisc->PC + 4;
@@ -173,7 +169,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case BGE_CODE:
     {
-        // printf("BGE\n");
         imm <<= 1;
         extend_sign(&imm, 13);
 
@@ -194,7 +189,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     case BLTU_CODE:
     {
         imm <<= 1;
-        // Sign extension
         extend_sign(&imm, 13);
 
         uint32_t target = minirisc->PC + imm;
@@ -214,7 +208,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     case BGEU_CODE:
     {
         imm <<= 1;
-        // Sign extension
         extend_sign(&imm, 13);
 
         uint32_t target = minirisc->PC + imm;
@@ -233,7 +226,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case LB_CODE:
     {
-        // printf("LB\n");
         extend_sign(&imm, 11);
         uint32_t mem_addr = minirisc->regs[rs_1] + imm;
         uint32_t ptr_addr = minirisc->regs[rd];
@@ -248,7 +240,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case LH_CODE:
     {
-        // printf("LH\n");
         extend_sign(&imm, 11);
         uint32_t target = minirisc->regs[rs_1] + imm;
         uint32_t addr = minirisc->regs[rd];
@@ -263,7 +254,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case LW_CODE:
     {
-        // printf("LW\n");
         extend_sign(&imm, 11);
         uint32_t target_data = minirisc->regs[rs_1] + imm;
 
@@ -282,7 +272,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK: a tester */
     case LBU_CODE:
     {
-        // printf("LBU\n");
         extend_sign(&imm, 11);
         uint32_t mem_addr = minirisc->regs[rs_1] + imm;
         uint32_t ptr_addr = minirisc->regs[rd];
@@ -311,7 +300,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SB_CODE:
     {
-        // printf("SB\n");
         extend_sign(&imm, 11);
         uint32_t addr = minirisc->regs[rs_1] + imm;
         uint32_t data = minirisc->regs[rd];
@@ -325,7 +313,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case SH_CODE:
     {
-        // printf("SH\n");
         extend_sign(&imm, 11);
         uint32_t addr = minirisc->regs[rs_1] + imm;
         uint32_t data = minirisc->regs[rd];
@@ -352,7 +339,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
     /* OK */
     case ADDI_CODE:
     {
-        // printf("ADDI\n");
         extend_sign(&imm, 11);
         minirisc->regs[rd] = minirisc->regs[rs_1] + imm;
 
@@ -360,9 +346,6 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
         minirisc->next_PC = minirisc->PC + 4;
         break;
     }
-
-    /* Ajouter de SLTI */
-
     /* A revoir */
     case SLTI_CODE:
     {
@@ -379,6 +362,7 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
+        break;
     }
     /* A revoir */
     case SLTIU_CODE:
@@ -396,9 +380,21 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
+        break;
     }
-    /* A revoir */
+    /* OK */
     case XORI_CODE:
+    {
+        extend_sign(&imm, 11);
+
+        minirisc->regs[rd] = (minirisc->regs[rs_1] & (0xFFFFFFFF - imm)) | ((0xFFFFFFFF - minirisc->regs[rs_1]) & imm);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case ORI_CODE:
     {
         extend_sign(&imm, 11);
 
@@ -406,10 +402,150 @@ void minirisc_decode_and_execute(struct minirisc_t *minirisc)
 
         minirisc->PC = minirisc->next_PC;
         minirisc->next_PC = minirisc->PC + 4;
+        break;
     }
+    /* OK */
+    case ANDI_CODE:
+    {
+        extend_sign(&imm, 11);
 
-    /* Jusqu'à AND */
+        minirisc->regs[rd] = minirisc->regs[rs_1] & imm;
 
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case SLLI_CODE:
+    {
+        minirisc->regs[rd] = minirisc->regs[rs_1] << shamt;
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case SRLI_CODE:
+    {
+        minirisc->regs[rd] = minirisc->regs[rs_1] >> shamt;
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case SRAI_CODE:
+    {
+        minirisc->regs[rd] = (uint32_t)((int32_t)minirisc->regs[rs_1] >> shamt);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case ADD_CODE:
+    {
+        minirisc->regs[rd] = minirisc->regs[rs_1] + minirisc->regs[rs2];
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case SUB_CODE:
+    {
+        minirisc->regs[rd] = minirisc->regs[rs_1] - minirisc->regs[rs2];
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case SLL_CODE:
+    {
+        minirisc->regs[rd] = minirisc->regs[rs_1] << (minirisc->regs[rs2] & 0x1F);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case SRL_CODE:
+    {
+        minirisc->regs[rd] = minirisc->regs[rs_1] >> (minirisc->regs[rs2] & 0x1F);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case SRA_CODE:
+    {
+        minirisc->regs[rd] = (uint32_t)((int32_t)minirisc->regs[rs_1] >> (minirisc->regs[rs2] & 0x1F));
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case SLT_CODE:
+    {
+        if ((int32_t)minirisc->regs[rs_1] < (int32_t)minirisc->regs[rs2])
+        {
+            minirisc->regs[rd] = 1;
+        }
+        else
+        {
+            minirisc->regs[rd] = 0;
+        }
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case SLTU_CODE:
+    {
+        if (minirisc->regs[rs_1] < minirisc->regs[rs2])
+        {
+            minirisc->regs[rd] = 1;
+        }
+        else
+        {
+            minirisc->regs[rd] = 0;
+        }
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case XOR_CODE:
+    {
+        minirisc->regs[rd] = (minirisc->regs[rs_1] & (0xFFFFFFFF - minirisc->regs[rs2])) | ((0xFFFFFFFF - minirisc->regs[rs_1]) & minirisc->regs[rs2]);
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case OR_CODE:
+    {
+        minirisc->regs[rd] = minirisc->regs[rs_1] | minirisc->regs[rs2];
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
+    /* OK */
+    case AND_CODE:
+    {
+        minirisc->regs[rd] = minirisc->regs[rs_1] & minirisc->regs[rs2];
+
+        minirisc->PC = minirisc->next_PC;
+        minirisc->next_PC = minirisc->PC + 4;
+        break;
+    }
     /* OK */
     case ECALL_CODE:
     {
