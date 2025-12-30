@@ -1,7 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 
 #include "types.h"
 #include "platform.h"
@@ -35,50 +33,18 @@ void platform_free(struct platform_t *platform)
 
 void platform_load_program(struct platform_t *platform, const char *file_name)
 {
-    /* A refaire: utiliser fopen, fread */
-    /* Charger le code dans la mémoire */
-    int fp = open(file_name, O_RDONLY);
+    FILE *fp = fopen(file_name, "r");
 
-    if (fp == -1)
+    if (fp == NULL)
     {
         perror("Error while opening the bin file");
         exit(EXIT_FAILURE);
     }
     else
     {
-        struct stat infos;
-        int e = stat(file_name, &infos);
-
-        if (e == -1)
-        {
-            perror("Error reading the length of the file");
-            exit(EXIT_FAILURE);
-        }
-
-        /* the size of the file (in uint32) */
-        int size = infos.st_size / 4;
-
-        uint32_t *buffer;
-
-        if ((buffer = malloc(size * sizeof(uint32_t))) == NULL)
-        {
-            perror("Malloc error");
-            exit(EXIT_FAILURE);
-        }
-
-        if (read(fp, buffer, 4 * size) == -1)
-        {
-            perror("Error while reading the file");
-            exit(EXIT_FAILURE);
-        }
-        for (int i = 0; i < size; i += 1)
-        {
-            platform->memory[i] = buffer[i];
-        }
-
-        free(buffer);
+        fread(platform->memory, 1, platform->size, fp);
     }
-    close(fp);
+    fclose(fp);
 }
 
 int platform_read(struct platform_t *platform, enum access_type_t access_type, uint32_t addr, uint32_t *data)
@@ -90,6 +56,11 @@ int platform_read(struct platform_t *platform, enum access_type_t access_type, u
     }
 
     /* Add: condition RAM */
+    if ((addr < RAM_BASE) || (addr >= (RAM_BASE + platform->size)))
+    {
+        printf("Segmentation Fault\n");
+        exit(1);
+    }
 
     switch (access_type)
     {

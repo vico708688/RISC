@@ -28,8 +28,5 @@ $(BUILD)/$(TARGET): $(OBJ)
 exec: $(BUILD)/$(TARGET)
 	./$<
 
-# gdb: $(BUILD)/$(TARGET)
-#     gdb --tui $<
-
 clean:
 	@rm -rvf $(BUILD)

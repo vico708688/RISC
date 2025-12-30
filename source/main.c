@@ -12,7 +12,8 @@ int main()
     platform = platform_new();
     minirisc = minirisc_new(RAM_BASE, platform);
 
-    platform_load_program(platform, "embedded_software/test_5/build/esw.bin");
+    platform_load_program(platform, "embedded_software/build/esw.bin");
+    // platform_load_program(platform, ""embedded_software/tests/test_5/build/esw.bin");
     minirisc_run(minirisc);
 
     minirisc_free(minirisc);

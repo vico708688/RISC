@@ -1,72 +1,93 @@
-# -------------------------------------------------------------------
-#  Mini-RISC Embedded Software Makefile
-#
-#  Usage :
-#      make TEST=1
-#      make TEST=2 exec
-# -------------------------------------------------------------------
+TC       = riscv32-MINIRISC-elf
+SHELL   := /bin/sh
+PATH    := $(PATH):/ens2/inf/computer_architecture/toolchain/gcc_MINIRISC/bin
+export PATH
 
-# Vérification du paramètre TEST
-ifndef TEST
-$(error Usage: make TEST=i)
-endif
-
-# -------------------------------------------------------------------
-# Chemins
-# -------------------------------------------------------------------
-ROOT_DIR := ..
-TEST_DIR := $(ROOT_DIR)/embedded_software/test_$(TEST)
-BUILD    := $(TEST_DIR)/build
-
-# Fichiers source
-SRCS := $(wildcard $(TEST_DIR)/*.S)
-TARGET = esw
-OBJS   = $(addprefix $(BUILD)/, $(notdir $(SRCS:.S=.o)))
-DEPS   = $(OBJS:.o=.d)
-
-# -------------------------------------------------------------------
-# Toolchain
-# -------------------------------------------------------------------
-TC      = riscv32-MINIRISC-elf
+TARGET  = esw
+BUILD   = build
 CC      = $(TC)-gcc
-LD      = $(TC)-gcc
+CXX     = $(TC)-g++
+LD      = $(TC)-g++
+AR      = $(TC)-ar
 SIZE    = $(TC)-size
 OBJCOPY = $(TC)-objcopy
 OBJDUMP = $(TC)-objdump
 
-# Flags
-CFLAGS  += -march=rv32im_zicsr -W -Wall -O2
-LDFLAGS += -nostartfiles -Wl,-Ttext=0x80000000
+LINKER_SCRIPT = minirisc.ld
 
-# -------------------------------------------------------------------
-# Règles
-# -------------------------------------------------------------------
-.PHONY: all clean exec
+CFLAGS  += -W -Wall
+CFLAGS  += -Os
 
-all: $(BUILD)/$(TARGET).elf $(BUILD)/$(TARGET).bin $(BUILD)/$(TARGET).lss
+CFLAGS  += -march=rv32im -mabi=ilp32
+
+#LDFLAGS += -Wl,-verbose
+LDFLAGS += -lm -Wl,-Map=./$(BUILD)/$(TARGET).map 
+LDFLAGS += -Wl,-T$(LINKER_SCRIPT)
+
+SRCC   += $(filter %.c,$(SRC))
+SRCS   += $(filter %.S,$(SRC))
+SRCCPP += $(filter %.cc,$(SRC))
+SRCC   += $(wildcard *.c)
+SRCS   += $(wildcard *.S)
+SRCCPP += $(wildcard *.cc)
+OBJS    = $(addprefix $(BUILD)/, $(SRCC:.c=.o) $(SRCS:.S=.o) $(SRCCPP:.cc=.o))
+DEPS    = $(addprefix $(BUILD)/, $(SRCC:.c=.d))
+DEPS   += $(addprefix $(BUILD)/, $(SRCS:.S=.d))
+DEPS   += $(addprefix $(BUILD)/, $(SRCCPP:.cc=.d))
+
+
+.PHONY: all clean size bin hex lss exec
+
+
+all: $(BUILD)/$(TARGET).elf $(BUILD)/$(TARGET).bin
 
 -include $(DEPS)
 
-# Compilation du .S
-$(BUILD)/%.o: $(TEST_DIR)/%.S
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -x assembler-with-cpp -c $< -o $@ \
-		-MMD -MP -MF"$(BUILD)/$*.d"
+$(BUILD)/%.o: %.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@ -MMD -MP -MF"$(@:%.o=%.d)"
 
-# Link
-$(BUILD)/$(TARGET).elf: $(OBJS)
-	$(LD) -o $@ $^ $(CFLAGS) $(LDFLAGS)
-	@echo "────────────── SIZE ──────────────"
+$(BUILD)/%.o: %.cc
+	@mkdir -p $(@D)
+	$(CXX) $(CFLAGS) -c $< -o $@ -MMD -MP -MF"$(@:%.o=%.d)"
+
+$(BUILD)/%.o: %.S
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -x assembler-with-cpp -c $< -o $@ -MMD -MP -MF"$(@:%.o=%.d)"
+
+$(BUILD)/$(TARGET).elf: $(OBJS) $(LINKER_SCRIPT)
+	$(LD) -o $@ $(filter %.o,$^) $(CFLAGS) $(LDFLAGS)  
+	@echo "────────────────────────────────────────────────────────────────────────────────"
 	@$(SIZE) $@
-	@echo "──────────────────────────────────"
+	@echo "────────────────────────────────────────────────────────────────────────────────"
 
-# Formats binaires
+$(BUILD)/$(TARGET).hex: $(BUILD)/$(TARGET).elf
+	$(OBJCOPY) -O ihex $< $@
+
 $(BUILD)/$(TARGET).bin: $(BUILD)/$(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
 
-$(BUILD)/$(TARGET).lss: $(BUILD)/$(TARGET).elf
-	$(OBJDUMP) -M no-aliases -h -D $< > $@
+size: $(BUILD)/$(TARGET).elf
+	$(SIZE) $<
 
-# Nettoyage
+$(BUILD)/$(TARGET).lss: $(BUILD)/$(TARGET).elf
+	@$(OBJDUMP) -h -d $< > $@
+
+#	$(OBJDUMP) -h -S -d $< > $@ # -S for sources, -d to disassemble all what have instruction
+#	$(OBJDUMP) -h -S -D -z $< > $@
+
+bin: $(BUILD)/$(TARGET).bin
+	@echo "done"
+
+hex: $(BUILD)/$(TARGET).hex
+	@echo "done"
+
+lss: $(BUILD)/$(TARGET).lss
+# 	vim $<
+
+exec: $(BUILD)/$(TARGET).bin
+	../emulator/build/minirisc $<
+
 clean:
-	rm -rf $(BUILD)
+	@rm -rf $(BUILD)
+
