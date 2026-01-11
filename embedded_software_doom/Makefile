@@ -1,0 +1,106 @@
+TC       = riscv32-MINIRISC-elf
+SHELL   := /bin/sh
+PATH    := $(PATH):/ens2/inf/computer_architecture/toolchain/gcc_MINIRISC/bin
+export PATH
+
+TARGET  = esw
+BUILD   = build
+CC      = $(TC)-gcc
+CXX     = $(TC)-g++
+LD      = $(TC)-g++
+AR      = $(TC)-ar
+SIZE    = $(TC)-size
+OBJCOPY = $(TC)-objcopy
+OBJDUMP = $(TC)-objdump
+
+LINKER_SCRIPT = minirisc.ld
+
+#CFLAGS  += -W -Wall
+#CFLAGS  += -Os
+CFLAGS  +=   -std=gnu89 \
+			-fno-builtin \
+			-fno-inline \
+			-fno-strict-aliasing \
+			-O0 \
+			-g \
+			-Wall
+
+
+CFLAGS  += -march=rv32im -mabi=ilp32
+
+#LDFLAGS += -Wl,-verbose
+LDFLAGS += -lm -Wl,-Map=./$(BUILD)/$(TARGET).map 
+LDFLAGS += -Wl,-T$(LINKER_SCRIPT)
+
+DOOM_SRC := $(shell find doomgeneric -name '*.c')
+
+# sources
+SRC += syscalls.c
+SRC += minirisc_init.S
+SRC += doomgeneric_minirisc.c
+SRC += doom_wad.c
+SRC += $(DOOM_SRC)
+
+# includes
+INCDIRS += doomgeneric
+CFLAGS  += $(addprefix -I,$(INCDIRS))
+
+# objects
+OBJS  = $(addprefix $(BUILD)/, $(SRC:.c=.o))
+OBJS := $(OBJS:.S=.o)
+
+.PHONY: all clean size bin hex lss exec
+
+all: $(BUILD)/$(TARGET).elf $(BUILD)/$(TARGET).bin
+
+-include $(DEPS)
+
+$(BUILD)/%.o: %.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@ -MMD -MP -MF"$(@:%.o=%.d)"
+
+$(BUILD)/%.o: %.cc
+	@mkdir -p $(@D)
+	$(CXX) $(CFLAGS) -c $< -o $@ -MMD -MP -MF"$(@:%.o=%.d)"
+
+$(BUILD)/%.o: %.S
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -x assembler-with-cpp -c $< -o $@ -MMD -MP -MF"$(@:%.o=%.d)"
+
+$(BUILD)/$(TARGET).elf: $(OBJS) $(LINKER_SCRIPT)
+	$(LD) -o $@ $(filter %.o,$^) $(CFLAGS) $(LDFLAGS)  
+	@echo "────────────────────────────────────────────────────────────────────────────────"
+	@$(SIZE) $@
+	@echo "────────────────────────────────────────────────────────────────────────────────"
+
+$(BUILD)/$(TARGET).hex: $(BUILD)/$(TARGET).elf
+	$(OBJCOPY) -O ihex $< $@
+
+$(BUILD)/$(TARGET).bin: $(BUILD)/$(TARGET).elf
+	$(OBJCOPY) -O binary $< $@
+
+size: $(BUILD)/$(TARGET).elf
+	$(SIZE) $<
+
+$(BUILD)/$(TARGET).lss: $(BUILD)/$(TARGET).elf
+	@$(OBJDUMP) -h -d $< > $@
+
+#	$(OBJDUMP) -h -S -d $< > $@ # -S for sources, -d to disassemble all what have instruction
+#	$(OBJDUMP) -h -S -D -z $< > $@
+
+bin: $(BUILD)/$(TARGET).bin
+	@echo "done"
+
+hex: $(BUILD)/$(TARGET).hex
+	@echo "done"
+
+lss: $(BUILD)/$(TARGET).lss
+# 	vim $<
+
+exec: $(BUILD)/$(TARGET).bin
+	../emulator/build/emulator $<
+	
+
+clean:
+	@rm -rf $(BUILD)
+

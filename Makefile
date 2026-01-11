@@ -1,13 +1,13 @@
 TARGET  = emulator
-BUILD   = build
-INCLUDE = include
-SOURCE  = source
-HEADER  = include
+BUILD   = $(EMUDIR)/build
+EMUDIR  = emulator
+INCLUDE = $(EMUDIR)/include
+SOURCE  = $(EMUDIR)/source
 CFILES  = $(notdir $(wildcard $(SOURCE)/*.c))
 OBJ     = $(addprefix $(BUILD)/, $(CFILES:.c=.o))
 DEPS    = $(OBJ:.o=.d)
-# TODO: résoudre les warnings
-CFLAGS += -W -Wall -Werror -Wno-unused-variable
+
+CFLAGS += -W -Wall -Werror
 CFLAGS += -O0 -g
 CFLAGS += -I$(INCLUDE)
 LDFLAGS = 

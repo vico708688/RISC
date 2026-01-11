@@ -3,7 +3,7 @@
 
 void put_char(char c)
 {
-    *(char *)0x10000000 = c;
+    *(int *)0x10000000 = c;
 }
 
 void put_string(const char *str)
